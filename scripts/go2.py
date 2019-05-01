@@ -9,10 +9,12 @@ import param
 from util import *
 
 
-def accumulate(accumulator, sample_pileup_path, num_threads, thread_id):
+def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id):
 
+    sample_pileup_path = sample_file_names[sample_index]
     tsprint(f"{sample_pileup_path}: Processing sample pileup path")
-    sample_name = chomp(sample_pileup_path, ".pileup")
+    sample_name = sample_brief_names[sample_index]
+    samples_count = len(sample_file_names)
     paramstr = f"gcb{param.MIN_GENOME_COVERED_BASES}.dp{param.MIN_DEPTH}.sr{param.MAX_SITE_RATIO}"
     input_path_site_id = f"{sample_name}.sites.{paramstr}.tsv"
     input_path_contig_stats = f"{sample_name}.contig_stats.tsv"
@@ -66,93 +68,115 @@ def accumulate(accumulator, sample_pileup_path, num_threads, thread_id):
     c_genome_id = columns["genome_id"]
     c_number_alleles = columns["number_alleles"]
 
-    s_sample_count = 4
+    # output column indices
+    s_A, s_C, s_G, s_T, s_sample_count = range(5)
 
     for line, row in enumerate(table_iterator):
 
         if line % (1000*1000) == 0:
-            tsprint(f"{sample_pileup_path}:{thread_id}: Processing {line}.")
+            tsprint(f"{sample_pileup_path}:{thread_id}:{sample_index} Processing {line}.")
         if line == param.MAX_LINES:
             break
+
+        # Unpack frequently accessed columns.
         contig_id = row[c_ref_id]
-        row_depth = row[c_depth]
+        depth = row[c_depth]
+        ref_pos = row[c_ref_pos]
+        ref_allele = row[c_ref_allele]
 
-        # Add derived columns
-        site_id = contig_id + "|" + str(row[c_ref_pos]) + "|" + str(row[c_ref_allele])
+        # Compute derived columns.
+        site_id = f"{contig_id}|{ref_pos}|{ref_allele}"
         genome_id = contig_id.split("_", 1)[0]
-        assert len(row) == c_site_id
-        row.append(site_id)
-        assert len(row) == c_genome_id
-        row.append(genome_id)
+        A, C, G, T = row[c_A], row[c_C], row[c_G], row[c_T]
         number_alleles = 0
-        for nt_count in (c_A, c_C, c_G, c_T):
-            if row[nt_count] / row_depth >= param.MIN_ALLELE_FREQUENCY_WITHIN_SAMPLE:
+        nonzero_allele_index = 4
+        for i, nt_count in enumerate((A, C, G, T)):
+            if nt_count / depth >= param.MIN_ALLELE_FREQUENCY_WITHIN_SAMPLE:
                 number_alleles += 1
-        assert len(row) == c_number_alleles
-        row.append(number_alleles)
+                nonzero_allele_index = i
+        site_ratio = depth / contig_stats[contig_id][cs_coverage]
+        genome_coverage = genome_stats[genome_id][gs_coverage]
+        genome_covered_bases = genome_stats[genome_id][gs_covered_bases]
+        # Doesn't matter which of the at-most-2 nonzero alleles we record here,
+        # because their frequencies add up to 1 and we can always infer the
+        # letter of the other one later, so one can be derived from the other.
+        nonzero_allele = "ACGTN"[nonzero_allele_index]
+        nonzero_allele_count = row[columns[nonzero_allele]]
+        nonzero_allele_freq = nonzero_allele_count / depth
 
-        #if line < 10:
-        #    tsprint(("\n" + json.dumps(dict(zip(columns.keys(), row)), indent=4)).replace("\n", "\n" + sample_pileup_path + ": "))
-
+        # Filter.
         if number_alleles > 2:
             continue
 
-        if genome_stats[genome_id][gs_coverage] < param.MIN_GENOME_COVERAGE:
+        if depth < param.MIN_DEPTH:
             continue
 
-        if row[c_depth] < param.MIN_DEPTH:
+        if genome_coverage < param.MIN_GENOME_COVERAGE:
             continue
 
-        if genome_stats[genome_id][gs_covered_bases] < param.MIN_GENOME_COVERED_BASES:
+        if genome_covered_bases < param.MIN_GENOME_COVERED_BASES:
             continue
 
-        contig_id = row[c_ref_id]
-        site_ratio = row[c_depth] / contig_stats[contig_id][cs_coverage]
         if site_ratio > param.MAX_SITE_RATIO:
              continue
 
-        # Aggregate
+        # Aggregate.
         genome_acc = accumulator[genome_id]
         acc = genome_acc.get(site_id)
-        if not acc:
-            acc = [0, 0, 0, 0, 0]
+        if acc:
+            acc[s_A] += A
+            acc[s_C] += C
+            acc[s_G] += G
+            acc[s_T] += T
+            acc[s_sample_count] += 1
+        else:
+            acc = [A, C, G, T, 1] + ([('N', 0)] * samples_count)
             genome_acc[site_id] = acc
 
-        acc[s_sample_count] += 1
+        # This isn't being accumulated across samples;  we are just remembering the value from each sample.
+        assert acc[5 + sample_index] == ('N', 0) and nonzero_allele != 'N'
+        acc[5 + sample_index] = (nonzero_allele, nonzero_allele_freq)
 
-        for i, nt_count in enumerate((c_A, c_C, c_G, c_T)):
-            acc[i] += row[nt_count]
 
-
-def filter2(accumulator, sample_list_file):
+def filter2(accumulator, sample_list_file, sample_brief_names):
 
     outpref = sample_list_file.rsplit(".", 1)[0]
     for genome_id, genome_acc in accumulator.items():
 
         output_sites = f"accumulators_{outpref}.gid_{genome_id}.sr_{param.MAX_SITE_RATIO}.mgc_{param.MIN_GENOME_COVERAGE}.tsv"
+        output_freqs = f"allele_freqs_{outpref}.gid_{genome_id}.sr_{param.MAX_SITE_RATIO}.mgc_{param.MIN_GENOME_COVERAGE}.tsv"
 
-        with open(output_sites, "w") as out_sites:
-            out_sites.write("site_id\tA\tC\tG\tT\tsample_count\n")  # hi
+        with open(output_sites, "w") as out_sites, \
+             open(output_freqs, "w") as out_freqs:
+            out_sites.write("site_id\tA\tC\tG\tT\tsample_count\n")
+            out_freqs.write("\t".join(["site_id", "major_allele", "minor_allele"] + sample_brief_names) + "\n")
             for site_id, site_info in genome_acc.items():
-                A, C, G, T, sample_count = site_info
+                A, C, G, T, sample_count = site_info[:5]
                 depth = A + C + G + T
-                num_alleles = 0
-                for ac in (A, C, G, T):
-                    if ac / depth >= param.MIN_GENOME_COVERAGE:
-                        num_alleles += 1
-                if num_alleles > 2:
-                    continue
-                out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\n")
+                all_alleles = ((A, 'A'), (C, 'C'), (G, 'G'), (T, 'T'))
+                alleles_above_cutoff = tuple(al for al in all_alleles if al[0] / depth >= param.MIN_ALLELE_FREQUECY_ACROSS_SAMPLES)
+                # Keep only bi-allelic and mono-allelic sites.
+                if 1 <= len(alleles_above_cutoff) <= 2:
+                    # In the event of a tie -- biallelic site with 50/50 freq split -- the allele declared major is
+                    # the one that comes later in the "ACGT" lexicographic order.
+                    alleles_above_cutoff = sorted(alleles_above_cutoff, reverse=True)
+                    major_allele = alleles_above_cutoff[0][1]
+                    minor_allele = alleles_above_cutoff[1][1] if len(alleles_above_cutoff) == 2 else major_allele
+                    out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\n")
+                    major_allele_freqs_by_sample = "\t".join(
+                        "{:.6f}".format(freq if allele==major_allele else 1.0 - freq)
+                        for allele, freq in site_info[5:])
+                    out_freqs.write(site_id + "\t" + major_allele + "\t" + minor_allele + "\t" + major_allele_freqs_by_sample + "\n")
 
 
 def process_worker(args):
-    sample_list_file, num_threads, thread_id = args
+    sample_list_file, sample_file_names, num_threads, thread_id = args
     t_start = time.time()
     accumulator = defaultdict(dict)
-    with open(sample_list_file, "r") as slf:
-        for sample_pileup in slf:
-            accumulate(accumulator, sample_pileup.strip(), num_threads, thread_id)
-    filter2(accumulator, sample_list_file)
+    sample_brief_names = [chomp(sfn, ".pileup") for sfn in sample_file_names]
+    for sample_index, sample_pileup_path in enumerate(sample_file_names):
+        accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id)
+    filter2(accumulator, sample_list_file, sample_brief_names)
     t_end = time.time()
     tsprint(f"THREAD {thread_id}: Run time {t_end - t_start} seconds.")
     return "it worked"
@@ -162,9 +186,11 @@ def main():
     assert len(sys.argv) > 1
     accumulator = defaultdict(dict)
     sample_list_file = sys.argv[1]
+    with open(sample_list_file, "r") as slf:
+        sample_file_names = [line.strip() for line in slf]
     t_start = time.time()
     mp = multiprocessing.Pool(param.THREADS)
-    results = mp.map(process_worker, [(sample_list_file, param.THREADS, thread_id) for thread_id in range(param.THREADS)])
+    results = mp.map(process_worker, [(sample_list_file, sample_file_names, param.THREADS, thread_id) for thread_id in range(param.THREADS)])
     t_end = time.time()
     tsprint(f"ALL THREADS:  Run time {t_end - t_start} seconds.")
     assert all(s == "it worked" for s in results)

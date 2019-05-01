@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 
-THREADS = 32
+THREADS = 24
 
 
 # set to -1 to unlimit
-MAX_LINES = -1 # 8 * 1000 * 1000
+MAX_LINES =  -1 #1 * 1000 * 1000
 
 
 MIN_DEPTH = 2
