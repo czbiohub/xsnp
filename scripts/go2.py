@@ -161,7 +161,7 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
                     # the one that comes later in the "ACGT" lexicographic order.
                     alleles_above_cutoff = sorted(alleles_above_cutoff, reverse=True)
                     major_allele = alleles_above_cutoff[0][1]
-                    minor_allele = alleles_above_cutoff[1][1] if len(alleles_above_cutoff) == 2 else major_allele
+                    minor_allele = alleles_above_cutoff[-1][1]  # for mono-allelic sites, same as major allele
                     out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\n")
                     major_allele_freqs_by_sample = "\t".join(
                         "{:.6f}".format(freq if allele==major_allele else 1.0 - freq)
