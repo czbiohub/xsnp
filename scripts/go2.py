@@ -71,6 +71,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     # output column indices
     s_A, s_C, s_G, s_T, s_sample_count = range(5)
 
+
     for line, row in enumerate(table_iterator):
 
         if line % (1000*1000) == 0:
@@ -97,6 +98,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         site_ratio = depth / contig_stats[contig_id][cs_coverage]
         genome_coverage = genome_stats[genome_id][gs_coverage]
         genome_covered_bases = genome_stats[genome_id][gs_covered_bases]
+
         # Doesn't matter which of the at-most-2 nonzero alleles we record here,
         # because their frequencies add up to 1 and we can always infer the
         # letter of the other one later, so one can be derived from the other.
@@ -107,16 +109,12 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         # Filter.
         if number_alleles > 2:
             continue
-
         if depth < param.MIN_DEPTH:
             continue
-
         if genome_coverage < param.MIN_GENOME_COVERAGE:
             continue
-
         if genome_covered_bases < param.MIN_GENOME_COVERED_BASES:
             continue
-
         if site_ratio > param.MAX_SITE_RATIO:
              continue
 
@@ -130,7 +128,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
             acc[s_T] += T
             acc[s_sample_count] += 1
         else:
-            acc = [A, C, G, T, 1] + ([('N', 0)] * samples_count)
+            acc = [A, C, G, T, 1] + ([('N', 0)] * samples_count) #<-- get rid of this
             genome_acc[site_id] = acc
 
         # This isn't being accumulated across samples;  we are just remembering the value from each sample.
@@ -147,7 +145,7 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
 
         with open(output_sites, "w") as out_sites:
             out_sites.write("site_id\tA\tC\tG\tT\tsample_count\t")
-            out_sites.write("\t".join(["site_id", "major_allele", "minor_allele"] + sample_brief_names) + "\n")
+            out_sites.write("\t".join(["major_allele", "minor_allele"] + sample_brief_names) + "\n")
             for site_id, site_info in genome_acc.items():
                 A, C, G, T, sample_count = site_info[:5]
                 depth = A + C + G + T
@@ -162,9 +160,9 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
                     minor_allele = alleles_above_cutoff[-1][1]  # for mono-allelic sites, same as major allele
                     out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\t")
                     major_allele_freqs_by_sample = "\t".join(
-                        "{:.6f}".format(freq if allele==major_allele else 1.0 - freq)
+                        "{:.3f}".format(0.0 if allele == 'N' else (freq if allele==major_allele else 1.0 - freq))
                         for allele, freq in site_info[5:])
-                    out_sites.write(site_id + "\t" + major_allele + "\t" + minor_allele + "\t" + major_allele_freqs_by_sample + "\n")
+                    out_sites.write(major_allele + "\t" + minor_allele + "\t" + major_allele_freqs_by_sample + "\n")
 
 
 def process_worker(args):
