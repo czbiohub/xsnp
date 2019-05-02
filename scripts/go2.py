@@ -144,12 +144,10 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
     for genome_id, genome_acc in accumulator.items():
 
         output_sites = f"accumulators_{outpref}.gid_{genome_id}.sr_{param.MAX_SITE_RATIO}.mgc_{param.MIN_GENOME_COVERAGE}.tsv"
-        output_freqs = f"allele_freqs_{outpref}.gid_{genome_id}.sr_{param.MAX_SITE_RATIO}.mgc_{param.MIN_GENOME_COVERAGE}.tsv"
 
-        with open(output_sites, "w") as out_sites, \
-             open(output_freqs, "w") as out_freqs:
-            out_sites.write("site_id\tA\tC\tG\tT\tsample_count\n")
-            out_freqs.write("\t".join(["site_id", "major_allele", "minor_allele"] + sample_brief_names) + "\n")
+        with open(output_sites, "w") as out_sites:
+            out_sites.write("site_id\tA\tC\tG\tT\tsample_count\t")
+            out_sites.write("\t".join(["site_id", "major_allele", "minor_allele"] + sample_brief_names) + "\n")
             for site_id, site_info in genome_acc.items():
                 A, C, G, T, sample_count = site_info[:5]
                 depth = A + C + G + T
@@ -162,11 +160,11 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
                     alleles_above_cutoff = sorted(alleles_above_cutoff, reverse=True)
                     major_allele = alleles_above_cutoff[0][1]
                     minor_allele = alleles_above_cutoff[-1][1]  # for mono-allelic sites, same as major allele
-                    out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\n")
+                    out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\t")
                     major_allele_freqs_by_sample = "\t".join(
                         "{:.6f}".format(freq if allele==major_allele else 1.0 - freq)
                         for allele, freq in site_info[5:])
-                    out_freqs.write(site_id + "\t" + major_allele + "\t" + minor_allele + "\t" + major_allele_freqs_by_sample + "\n")
+                    out_sites.write(site_id + "\t" + major_allele + "\t" + minor_allele + "\t" + major_allele_freqs_by_sample + "\n")
 
 
 def process_worker(args):
