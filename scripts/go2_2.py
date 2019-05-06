@@ -175,11 +175,13 @@ def process_worker(args):
         contig_id = row[cs_contig_id]
         contig_stats[sample_name][contig_id] = row
 
-
+    print(genome_stats)
+    exit(0)
     accumulator = defaultdict(dict)
     sample_brief_names = [chomp(sfn, ".pileup") for sfn in sample_file_names]
     for sample_index, sample_pileup_path in enumerate(sample_file_names):
         accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id)
+
     filter2(accumulator, sample_list_file, sample_brief_names)
     t_end = time.time()
     tsprint(f"THREAD {thread_id}: Run time {t_end - t_start} seconds.")

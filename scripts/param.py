@@ -32,7 +32,7 @@ sample_pileup_schema = {
 
 schema_genome_stats = {
     "sample_name", (str,)
-    "genome_id": (str,),
+    "genome_id": (str,)
     "genome_total_depth": (int, "total_depth"),
     "genome_covered_bases": (int, "covered_bases")
 }
