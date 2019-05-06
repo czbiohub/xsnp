@@ -73,7 +73,6 @@ def process(sample_pileup_path, num_threads, thread_id, contig_accumulator, geno
         # Index and aggregate rows
         sites_count += 1
 
-
         acc1 = contig_acc.get(contig_id)
         if acc1:
             acc1[oc_contig_depth] += depth
@@ -137,7 +136,7 @@ def process(sample_pileup_path, num_threads, thread_id, contig_accumulator, geno
     # print_top(genome_covered_bases)
 
     with open(output_path_site_id, "w") as o1:
-        o1.write("\t".join(["side_id", "depth", "A", "C", "G", "T", "nz_allele", "nz_allele_freq"]) + "\n")
+        o1.write("\t".join(["site_id", "depth", "A", "C", "G", "T", "nz_allele", "nz_allele_freq"]) + "\n")
         output_sites = 0
         for site_id, row in sites.items():
             if genome_accumulator[sample_name][row[c_genome_id]][og_genome_covered_bases] < param.MIN_GENOME_COVERED_BASES:
@@ -171,18 +170,17 @@ def process_worker(args):
     output_path_contig_stats = f"intermediate/tid{thread_id}.contig_stats.tsv"
     output_path_genome_stats = f"intermediate/tid{thread_id}.genome_stats.tsv"
 
-    for sample_name, contig_acc in contig_accumulator.items():
-        with open(output_path_contig_stats, "w") as o2:
-            o2.write("sample_name\tcontig_id\tgenome_id\tcontig_total_depth\tcontig_covered_bases\n")
+    with open(output_path_contig_stats, "w") as o2:
+        o2.write("sample_name\tcontig_id\tgenome_id\tcontig_total_depth\tcontig_covered_bases\n")
+        for sample_name, contig_acc in contig_accumulator.items():
             for contig_id, contig_info in contig_acc.items():
                 contig_total_depth, contig_covered_bases = contig_info
                 genome_id = contig_id.split("_", 1)[0]
                 o2.write(f"{sample_name}\t{contig_id}\t{genome_id}\t{contig_total_depth}\t{contig_covered_bases}\n")
 
-
-    for sample_name, genome_acc in genome_accumulator.items():
-        with open(output_path_genome_stats, "w") as o3:
-            o3.write("sample_name\tgenome_id\tgenome_total_depth\tgenome_covered_bases\n")
+    with open(output_path_genome_stats, "w") as o3:
+        o3.write("sample_name\tgenome_id\tgenome_total_depth\tgenome_covered_bases\n")
+        for sample_name, genome_acc in genome_accumulator.items():
             for genome_id, genome_info in genome_acc.items():
                 genome_total_depth, genome_covered_bases = genome_info
                 o3.write(f"{sample_name}\t{genome_id}\t{genome_total_depth}\t{genome_covered_bases}\n")
@@ -209,6 +207,8 @@ def main():
     #status = mp.map(process, sys.argv[1:])
     #assert all(s == "it worked" for s in status)
     sample_list_file = sys.argv[1]
+    ontig_accumulator = defaultdict(dict)
+    genome_accumulator = defaultdict(dict)
     with open(sample_list_file, "r") as slf:
         sample_file_names = [line.strip() for line in slf]
     t_start = time.time()
