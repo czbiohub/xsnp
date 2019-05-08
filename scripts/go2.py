@@ -70,7 +70,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
 
     for line, row in enumerate(table_iterator):
 
-        if line % (1000*100) == 0:
+        if line % (1000*1000) == 0:
             tsprint(f"{sample_pileup_path}:tid{thread_id}:sidx{sample_index} Processing {line}.")
         if line == param.MAX_LINES:
             break

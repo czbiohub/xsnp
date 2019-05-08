@@ -5,7 +5,7 @@ THREADS = 48
 
 
 # set to -1 to unlimit
-MAX_LINES =  1 * 1000 * 100 #-1
+MAX_LINES =  -1 #1 * 1000 * 100 #-1
 
 
 MIN_DEPTH = 2
