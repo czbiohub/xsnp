@@ -87,12 +87,12 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         contig_id = site_id.split("|", 1)[0]
         nz_allele_freq = nz_allele_count / depth
 
-        #site_ratio = depth / contig_stats[contig_id][cs_coverage]
-        #genome_coverage = genome_stats[genome_id][gs_coverage]
         site_ratio = depth / contig_stats[sample_name][contig_id][cs_coverage]
         genome_coverage = genome_stats[sample_name][genome_id][gs_coverage]
 
         # Filter.
+        if depth < param.MIN_DEPTH_SNP:
+            continue
         if genome_coverage < param.MIN_GENOME_COVERAGE:
             continue
         if site_ratio > param.MAX_SITE_RATIO:
@@ -120,7 +120,7 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
     outpref = sample_list_file.rsplit(".", 1)[0]
     for genome_id, genome_acc in accumulator.items():
 
-        output_sites = f"accumulators_{outpref}.gid_{genome_id}.sr_{param.MAX_SITE_RATIO}.mgc_{param.MIN_GENOME_COVERAGE}.tsv"
+        output_sites = f"accumulators_{outpref}.gid_{genome_id}.sr_{param.MAX_SITE_RATIO}.dp_{param.MIN_DEPTH_SNP}.mgc_{param.MIN_GENOME_COVERAGE}.tsv"
 
         with open(output_sites, "w") as out_sites:
             out_sites.write("site_id\tA\tC\tG\tT\tsample_count\t")
