@@ -12,111 +12,91 @@ from util import *
 def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id):
 
     sample_pileup_path = sample_file_names[sample_index]
-    tsprint(f"{sample_pileup_path}: Processing sample pileup path")
+    #tsprint(f"{sample_pileup_path}: Processing sample pileup path")
     sample_name = sample_brief_names[sample_index]
     samples_count = len(sample_file_names)
-    paramstr = f"gcb{param.MIN_GENOME_COVERED_BASES}.dp{param.MIN_DEPTH}.sr{param.MAX_SITE_RATIO}"
-    input_path_site_id = f"{sample_name}.sites.{paramstr}.tsv"
-    input_path_contig_stats = f"{sample_name}.contig_stats.tsv"
-    input_path_genome_stats = f"{sample_name}.genome_stats.tsv"
+    band = sample_pileup_path.rsplit(".", 2)[1]
+    paramstr = f"gcb{param.MIN_GENOME_COVERED_BASES}.dp{param.MIN_DEPTH}.{band}"
+
+    input_path_contig_stats = f"{band}.contig_stats.tsv"
+    input_path_genome_stats = f"{band}.genome_stats.tsv"
 
     # Load genome stats
     table_iterator = parse_table(tsv_rows(input_path_genome_stats), param.schema_genome_stats)
     columns = next(table_iterator)
+    gs_sample_name = columns["sample_name"]
     gs_genome_id = columns["genome_id"]
     gs_total_depth = columns["total_depth"]
     gs_covered_bases = columns["covered_bases"]
     gs_coverage = columns["coverage"] = len(columns)
-    genome_stats = {}
+    genome_stats = defaultdict(dict)
     for line, row in enumerate(table_iterator):
         row.append(row[gs_total_depth] / row[gs_covered_bases])
+        sname = row[gs_sample_name]
         genome_id = row[gs_genome_id]
-        genome_stats[genome_id] = row
+        genome_stats[sname][genome_id] = row
 
     # Load contig stats
     table_iterator = parse_table(tsv_rows(input_path_contig_stats), param.schema_contig_stats)
     columns = next(table_iterator)
+    cs_sample_name = columns["sample_name"]
     cs_contig_id = columns["contig_id"]
     cs_total_depth = columns["total_depth"]
     cs_covered_bases = columns["covered_bases"]
     cs_coverage = columns["coverage"] = len(columns)
-    contig_stats = {}
+    contig_stats = defaultdict(dict)
     for line, row in enumerate(table_iterator):
         row.append(row[cs_total_depth] / row[cs_covered_bases])
+        sname = row[cs_sample_name]
         contig_id = row[cs_contig_id]
-        contig_stats[contig_id] = row
+        contig_stats[sname][contig_id] = row
 
-    #table_iterator = parse_table(tsv_rows(sample_pileup_path), param.sample_pileup_schema)
-    table_iterator = parse_table(tsv_rows_slice(sample_pileup_path, num_threads, thread_id), param.sample_pileup_schema)
+    # Read banhded pileup files
+    table_iterator = parse_table(tsv_rows_slice2(sample_pileup_path, num_threads, thread_id), param.sample_pileup_schema_banded)
     columns = next(table_iterator)
 
-    # Add derived columns
-    columns["site_id"] = len(columns)
-    columns["genome_id"] = len(columns)
-    columns["number_alleles"] = len(columns)
-
     # Get integer keys for columns
-    c_ref_id = columns["ref_id"]
+    c_site_id = columns["site_id"]
     c_depth = columns["depth"]
-    c_ref_pos = columns["ref_pos"]
-    c_ref_allele = columns["ref_allele"]
     c_A = columns["A"]
     c_C = columns["C"]
     c_G = columns["G"]
     c_T = columns["T"]
-    c_site_id = columns["site_id"]
-    c_genome_id = columns["genome_id"]
-    c_number_alleles = columns["number_alleles"]
+    c_nz_allele = columns["nz_allele"]
+    c_nz_allele_count = columns["nz_allele_count"]
 
-    # output column indices
+    # Output column indices
     s_A, s_C, s_G, s_T, s_sample_count = range(5)
-
 
     for line, row in enumerate(table_iterator):
 
-        if line % (1000*1000) == 0:
-            tsprint(f"{sample_pileup_path}:{thread_id}:{sample_index} Processing {line}.")
+        if line % (1000*100) == 0:
+            tsprint(f"{sample_pileup_path}:tid{thread_id}:sidx{sample_index} Processing {line}.")
         if line == param.MAX_LINES:
             break
 
         # Unpack frequently accessed columns.
-        contig_id = row[c_ref_id]
+        site_id = row[c_site_id]
         depth = row[c_depth]
-        ref_pos = row[c_ref_pos]
-        ref_allele = row[c_ref_allele]
+        nz_allele = row[c_nz_allele]
+        nz_allele_count = row[c_nz_allele_count]
+        A, C, G, T = row[c_A], row[c_C], row[c_G], row[c_T]
 
         # Compute derived columns.
-        site_id = f"{contig_id}|{ref_pos}|{ref_allele}"
-        genome_id = contig_id.split("_", 1)[0]
-        A, C, G, T = row[c_A], row[c_C], row[c_G], row[c_T]
-        number_alleles = 0
-        nonzero_allele_index = 4
-        for i, nt_count in enumerate((A, C, G, T)):
-            if nt_count / depth >= param.MIN_ALLELE_FREQUENCY_WITHIN_SAMPLE:
-                number_alleles += 1
-                nonzero_allele_index = i
-        site_ratio = depth / contig_stats[contig_id][cs_coverage]
-        genome_coverage = genome_stats[genome_id][gs_coverage]
-        genome_covered_bases = genome_stats[genome_id][gs_covered_bases]
+        genome_id = site_id.split("_", 1)[0]
+        contig_id = site_id.split("|", 1)[0]
+        nz_allele_freq = nz_allele_count / depth
 
-        # Doesn't matter which of the at-most-2 nonzero alleles we record here,
-        # because their frequencies add up to 1 and we can always infer the
-        # letter of the other one later, so one can be derived from the other.
-        nonzero_allele = "ACGTN"[nonzero_allele_index]
-        nonzero_allele_count = row[columns[nonzero_allele]]
-        nonzero_allele_freq = nonzero_allele_count / depth
+        #site_ratio = depth / contig_stats[contig_id][cs_coverage]
+        #genome_coverage = genome_stats[genome_id][gs_coverage]
+        site_ratio = depth / contig_stats[sample_name][contig_id][cs_coverage]
+        genome_coverage = genome_stats[sample_name][genome_id][gs_coverage]
 
         # Filter.
-        if number_alleles > 2:
-            continue
-        if depth < param.MIN_DEPTH:
-            continue
         if genome_coverage < param.MIN_GENOME_COVERAGE:
             continue
-        if genome_covered_bases < param.MIN_GENOME_COVERED_BASES:
-            continue
         if site_ratio > param.MAX_SITE_RATIO:
-             continue
+            continue
 
         # Aggregate.
         genome_acc = accumulator[genome_id]
@@ -128,12 +108,11 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
             acc[s_T] += T
             acc[s_sample_count] += 1
         else:
-            acc = [A, C, G, T, 1] + ([('N', 0)] * samples_count) #<-- get rid of this
+            acc = [A, C, G, T, 1] + ([('N', 0)] * samples_count)
             genome_acc[site_id] = acc
-
         # This isn't being accumulated across samples;  we are just remembering the value from each sample.
-        assert acc[5 + sample_index] == ('N', 0) and nonzero_allele != 'N'
-        acc[5 + sample_index] = (nonzero_allele, nonzero_allele_freq)
+        assert acc[5 + sample_index] == ('N', 0) and nz_allele != 'N'
+        acc[5 + sample_index] = (nz_allele, nz_allele_freq)
 
 
 def filter2(accumulator, sample_list_file, sample_brief_names):
@@ -169,7 +148,7 @@ def process_worker(args):
     sample_list_file, sample_file_names, num_threads, thread_id = args
     t_start = time.time()
     accumulator = defaultdict(dict)
-    sample_brief_names = [chomp(sfn, ".pileup") for sfn in sample_file_names]
+    sample_brief_names = [sfn.split(".", 1)[0] for sfn in sample_file_names]
     for sample_index, sample_pileup_path in enumerate(sample_file_names):
         accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id)
     filter2(accumulator, sample_list_file, sample_brief_names)

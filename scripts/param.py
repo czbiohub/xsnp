@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 
-THREADS = 24
+THREADS = 48
 
 
 # set to -1 to unlimit
-MAX_LINES =  -1 #1 * 1000 * 1000 #-1
+MAX_LINES =  1 * 1000 * 100 #-1
 
 
 MIN_DEPTH = 2
@@ -16,7 +16,6 @@ MIN_ALLELE_FREQUENCY_WITHIN_SAMPLE=0.01
 
 MIN_GENOME_COVERAGE = 2.0
 MIN_ALLELE_FREQUECY_ACROSS_SAMPLES = 0.1
-
 
 sample_pileup_schema = {
    "count_a": (int, "A"),
@@ -46,7 +45,7 @@ schema_contig_stats = {
     "contig_covered_bases": (int, "covered_bases")
 }
 
-sample_pileup_id_schema = {
+sample_pileup_schema_banded = {
     "site_id": (str,),
     "depth": (int,),
     "A": (int,),
@@ -54,5 +53,5 @@ sample_pileup_id_schema = {
     "G": (int,),
     "T": (int,),
     "nz_allele": (str,),
-    "nz_allele_freq": (float,)
+    "nz_allele_count": (int,)
 }

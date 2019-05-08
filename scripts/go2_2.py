@@ -35,7 +35,7 @@ def accumulate(accumulator, sample_file_names, sample_index, num_threads, thread
 
     for line, row in enumerate(table_iterator):
 
-        if line % (1000*1000) == 0:
+        if line % (1000*1000 == 0:
             tsprint(f"{sample_pileup_path}:{thread_id}:{sample_index} Processing {line}.")
         if line == param.MAX_LINES:
             break
@@ -70,9 +70,6 @@ def accumulate(accumulator, sample_file_names, sample_index, num_threads, thread
         else:
             acc = [A, C, G, T, 1]
             genome_acc[site_id] = acc
-        # This isn't being accumulated across samples;  we are just remembering the value from each sample.
-        #assert acc[5 + sample_index] == ('N', 0) and nonzero_allele != 'N'
-        #acc[5 + sample_index] = (nonzero_allele, nonzero_allele_freq)
 
 
 def filter2(accumulator, sample_list_file, sample_brief_names):
@@ -110,38 +107,6 @@ def process_worker(args):
     sample_list_file, sample_file_names, num_threads, thread_id = args
     t_start = time.time()
 
-    input_path_contig_stats = f"intermediate/tid{thread_id}.contig_stats.tsv"
-    input_path_genome_stats = f"intermediate/tid{thread_id}.genome_stats.tsv"
-
-    # Load genome stats
-    table_iterator = parse_table(tsv_rows(input_path_genome_stats), param.schema_genome_stats)
-    columns = next(table_iterator)
-    gs_sample_name = columns["sample_name"]
-    gs_genome_id = columns["genome_id"]
-    gs_total_depth = columns["total_depth"]
-    gs_covered_bases = columns["covered_bases"]
-    gs_coverage = columns["coverage"] = len(columns)
-    genome_stats = defaultdict(dict)
-    for line, row in enumerate(table_iterator):
-        row.append(row[gs_total_depth] / row[gs_covered_bases])
-        sample_name = row[gs_sample_name]
-        genome_id = row[gs_genome_id]
-        genome_stats[sample_name][genome_id] = row
-
-    # Load contig stats
-    table_iterator = parse_table(tsv_rows(input_path_contig_stats), param.schema_contig_stats)
-    columns = next(table_iterator)
-    cs_sample_name = columns["sample_name"]
-    cs_contig_id = columns["contig_id"]
-    cs_total_depth = columns["total_depth"]
-    cs_covered_bases = columns["covered_bases"]
-    cs_coverage = columns["coverage"] = len(columns)
-    contig_stats = defaultdict(dict)
-    for line, row in enumerate(table_iterator):
-        row.append(row[cs_total_depth] / row[cs_covered_bases])
-        sample_name = row[cs_sample_name]
-        contig_id = row[cs_contig_id]
-        contig_stats[sample_name][contig_id] = row
 
     accumulator = defaultdict(dict)
     sample_brief_names = [chomp(sfn, ".pileup") for sfn in sample_file_names]
