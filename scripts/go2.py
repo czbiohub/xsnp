@@ -139,7 +139,7 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
                     minor_allele = alleles_above_cutoff[-1][1]  # for mono-allelic sites, same as major allele
                     out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\t")
                     major_allele_freqs_by_sample = "\t".join(
-                        "{:.3f}".format(0.0 if allele == 'N' else (freq if allele==major_allele else 1.0 - freq))
+                        "{:.3f}".format(-1.0 if allele == 'N' else (freq if allele==major_allele else 1.0 - freq))
                         for allele, freq in site_info[5:])
                     out_sites.write(major_allele + "\t" + minor_allele + "\t" + major_allele_freqs_by_sample + "\n")
 
