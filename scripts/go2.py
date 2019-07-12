@@ -3,6 +3,7 @@ import sys
 import json
 import multiprocessing
 import time
+import os
 from collections import defaultdict
 
 import param
@@ -162,11 +163,14 @@ def process_worker(args):
     sample_list_file, sample_file_names, thread_id = args
     t_start = time.time()
     accumulator = defaultdict(dict)
-    sample_brief_names = [sfn.split(".", 1)[0] for sfn in sample_file_names]
+    sample_brief_names = [os.path.basename(sfn).split(".", 1)[0] for sfn in sample_file_names]
+    print("sample_brief_names", sample_brief_names)
+
     for sample_index, sample_pileup_path in enumerate(sample_file_names):
         accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, thread_id)
     filter2(accumulator, sample_list_file, sample_brief_names)
     t_end = time.time()
+
     tsprint(f"THREAD {thread_id}: Run time {t_end - t_start} seconds.")
     return "it worked"
 
@@ -186,7 +190,7 @@ def main():
         contigs = [c for c,g in param.CONTIGS.items() if g in genomes]
         threads_banded[thread_id]['genomes'] = list(genomes)
         threads_banded[thread_id]['contigs'] = list(contigs)
-        output_path_contig_list = f"band{thread_id}.contig_lists.txt"
+        output_path_contig_list = f"banded/band{thread_id}.contig_lists.txt"
         with open(output_path_contig_list, 'w') as ot:
             for contig in contigs:
                 ot.write(f"{contig}\n")
