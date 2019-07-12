@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-THREADS = 8
+THREADS = 24
 
 
 # set to -1 to unlimit
