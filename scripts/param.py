@@ -46,14 +46,27 @@ schema_contig_stats = {
     "contig_covered_bases": (int, "covered_bases")
 }
 
-sample_pileup_schema_banded = {
-    ## need to change this part
+sample_pileup_schema_banded_v1 = {
     "site_id": (str,),
     "depth": (int,),
     "A": (int,),
     "C": (int,),
     "G": (int,),
     "T": (int,),
+    "nz_allele": (str,),
+    "nz_allele_count": (int,)
+}
+
+sample_pileup_schema_banded_v2 = {
+    "genome_id":(str,),
+    "ref_id": (str, ),
+    "ref_pos": (int,),
+    "depth": (int,),
+    "A": (int,),
+    "C": (int,),
+    "G": (int,),
+    "T": (int,),
+    "number_alleles": (int,),
     "nz_allele": (str,),
     "nz_allele_count": (int,)
 }
