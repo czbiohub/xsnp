@@ -12,7 +12,6 @@ from util import *
 
 def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulator):
     """ process one sample """
-    #tsprint(f"{sample_pileup_path}_tid{thread_id}: Processing sample pileup path")
     sample_name = chomp(sample_pileup_path, ".pileup")
     paramstr = f"dp{param.MIN_DEPTH}.gcb{param.MIN_GENOME_COVERED_BASES}.band{thread_id}"
     banded_output_path = f"banded/{sample_name}.pileup.{paramstr}.tsv"
@@ -21,7 +20,6 @@ def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulato
     sites = {}
     sites_count = 0
 
-    #table_iterator = parse_table(tsv_rows(sample_pileup_path), param.sample_pileup_schema)
     table_iterator = parse_table(tsv_rows_slice_contig(sample_pileup_path, thread_id), param.sample_pileup_schema)
     columns = next(table_iterator)
 
@@ -56,7 +54,7 @@ def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulato
 
     for line, row in enumerate(table_iterator):
         if line % (1000*1000) == 0:
-            tsprint(f"{sample_pileup_path}_tid{thread_id}: Processing {line}.")
+            tsprint(f"{sample_pileup_path}_THREADID: {thread_id}: Processing {line}.")
         if line == param.MAX_LINES:
             break
 
@@ -90,8 +88,8 @@ def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulato
             acc2 = [depth, 1]
             genome_acc[genome_id] = acc2
 
-        #if line < 10:
-        #    tsprint(("\n" + json.dumps(dict(zip(columns.keys(), row)), indent=4)).replace("\n", "\n" + sample_pileup_path + ": "))
+        if line < 1:
+            tsprint(("\n" + json.dumps(dict(zip(columns.keys(), row)), indent=4)).replace("\n", "\n" + sample_pileup_path + ": "))
 
         A, C, G, T = row[c_A], row[c_C], row[c_G], row[c_T]
         number_alleles = 0
@@ -130,17 +128,17 @@ def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulato
     # print_top(genome_covered_bases)
 
     with open(banded_output_path, "w") as o1:
-        o1.write("\t".join(["site_id", "depth", "A", "C", "G", "T", "nz_allele", "nz_allele_count"]) + "\n")
+        o1.write("\t".join(["genome_id", "ref_id", "ref_pos","depth", "A", "C", "G", "T", "number_alleles" ,"nz_allele", "nz_allele_count"]) + "\n")
         output_sites = 0
         for site_id, row in sites.items():
             if genome_accumulator[sample_name][row[c_genome_id]][og_genome_covered_bases] < param.MIN_GENOME_COVERED_BASES:
                 continue
-            o1.write("\t".join([row[c_site_id], str(row[c_depth]), str(row[c_A]), str(row[c_C]), str(row[c_G]), str(row[c_T]), row[c_nz_allele], str(row[c_nz_allele_count])]) + "\n")
+            o1.write("\t".join([str(row[c_genome_id]), str(row[c_ref_id]), str(row[c_ref_pos]), str(row[c_depth]), str(row[c_A]), str(row[c_C]), str(row[c_G]), str(row[c_T]), str(row[c_number_alleles]), row[c_nz_allele], str(row[c_nz_allele_count])]) + "\n")
             output_sites += 1
 
     t_end = time.time()
     #tsprint(f"{sample_name}_tid{thread_id}: Output {output_sites} sites passing filters, out of {len(sites)} total sites.  Pass rate: {output_sites/len(sites)*100:3.1f} percent.")
-    tsprint(f"{sample_name}_tid{thread_id}: Run time {t_end - t_start} seconds, or {sites_count/(t_end - t_start):.1f} sites per second.")
+    tsprint(f"{sample_name}_THREADID: {thread_id}: Run time {t_end - t_start} seconds.") #, or {sites_count/(t_end - t_start):.1f} sites per second.")
     return "it worked"
 
 
@@ -157,13 +155,13 @@ def process_worker(args):
     output_path_contig_stats = f"banded/band{thread_id}.contig_stats.tsv"
     output_path_genome_stats = f"banded/band{thread_id}.genome_stats.tsv"
     with open(output_path_contig_stats, "w") as o2:
-        o2.write("sample_name\tcontig_id\tgenome_id\tcontig_total_depth\tcontig_covered_bases\n")
+        o2.write("sample_name\tgenome_id\tcontig_id\tcontig_total_depth\tcontig_covered_bases\n")
         for sample_name, contig_acc in contig_accumulator.items():
             for contig_id, contig_info in contig_acc.items():
                 contig_total_depth, contig_covered_bases = contig_info
                 #genome_id = contig_id.split("_", 1)[0]
                 genome_id = param.CONTIGS[contig_id]
-                o2.write(f"{sample_name}\t{contig_id}\t{genome_id}\t{contig_total_depth}\t{contig_covered_bases}\n")
+                o2.write(f"{sample_name}\t{genome_id}\t{contig_id}\t{contig_total_depth}\t{contig_covered_bases}\n")
     with open(output_path_genome_stats, "w") as o3:
         o3.write("sample_name\tgenome_id\tgenome_total_depth\tgenome_covered_bases\n")
         for sample_name, genome_acc in genome_accumulator.items():

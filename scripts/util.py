@@ -88,15 +88,16 @@ def tsv_rows_slice2(path, num_threads, thread_id):
                 yield line.rstrip("\n").split("\t")
 
 def tsv_rows_slice_contig(path, thread_id):
-    # TODO:  Support s3 and compressed files.
+    # https://stackoverflow.com/questions/2804543/read-subprocess-stdout-line-by-line
     pattern_contig_list = f"banded/band{thread_id}.contig_lists.txt"
     command = 'grep -Fwf %s %s' % (pattern_contig_list, path)
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+    yield next(open(path, "r")).rstrip("\n").split("\t")
     while True:
         line = process.stdout.readline()
         if not line:
             break
-        yield line
+        yield line.decode("utf-8").rstrip("\n").split("\t")
 
 def print_top(counters, how_many=5):
     print(json.dumps(sorted(((depth, contig_id) for contig_id, depth in counters.items()), reverse=True)[:how_many], indent=4))
