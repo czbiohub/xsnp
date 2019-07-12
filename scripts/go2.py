@@ -160,15 +160,14 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
 
 def process_worker(args):
     sample_list_file, sample_file_names, thread_id = args
+    print(thread_id)
     t_start = time.time()
     accumulator = defaultdict(dict)
     sample_brief_names = [os.path.basename(sfn).split(".", 1)[0] for sfn in sample_file_names]
-
     for sample_index, sample_pileup_path in enumerate(sample_file_names):
         accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, thread_id)
     filter2(accumulator, sample_list_file, sample_brief_names)
     t_end = time.time()
-
     tsprint(f"THREAD {thread_id}: Run time {t_end - t_start} seconds.")
     return "it worked"
 
