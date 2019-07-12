@@ -77,6 +77,14 @@ def tsv_rows_slice(path, num_threads, thread_id):
             if int(line[4:6]) % num_threads == thread_id:
                 yield line.rstrip("\n").split("\t")
 
+def tsv_rows_slice2(path, num_threads, thread_id):
+    # TODO:  Support s3 and compressed files.
+    assert num_threads <= 100, "or else update 4:6 in 'line[4:6]' below"
+    with open(path, "r") as stream:
+        yield next(stream).rstrip("\n").split("\t")
+        for line in stream:
+            if int(line[2:4]) % num_threads == thread_id:
+                yield line.rstrip("\n").split("\t")
 
 def print_top(counters, how_many=5):
     print(json.dumps(sorted(((depth, contig_id) for contig_id, depth in counters.items()), reverse=True)[:how_many], indent=4))
