@@ -50,7 +50,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         contig_id = row[cs_contig_id]
         contig_stats[sname][contig_id] = row
 
-    # Read banhded pileup files
+    # Read banded pileup files
     #table_iterator = parse_table(tsv_rows_slice2(sample_pileup_path, num_threads, thread_id), param.sample_pileup_schema_banded)
     table_iterator = parse_table(tsv_rows_slice_contig(sample_pileup_path, thread_id), param.sample_pileup_schema_banded_v2)
     columns = next(table_iterator)
@@ -90,25 +90,24 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         A, C, G, T = row[c_A], row[c_C], row[c_G], row[c_T]
 
         # Compute derived columns.
-        #genome_id = site_id.split("_", 1)[0]
-        #contig_id = site_id.split("|", 1)[0]
         site_id = f"{contig_id}|{ref_pos}|{ref_allele}"
         nz_allele_freq = nz_allele_count / depth
         site_ratio = depth / contig_stats[sample_name][contig_id][cs_coverage]
         genome_coverage = genome_stats[sample_name][genome_id][gs_coverage]
-        # sample count for ACGT (move to go.py)
+
+        # Filter.
+        if genome_coverage < param.MIN_GENOME_COVERAGE:
+            continue
+        if depth < param.MIN_DEPTH_SNP:
+            continue
+        if site_ratio > param.MAX_SITE_RATIO:
+            continue
+
+        # Sample count for ACGT
         sc_ACGT = [0, 0, 0, 0]
         for i, nt_count in enumerate((A, C, G, T)):
             if nt_count / depth >= param.MIN_ALLELE_FREQUENCY_WITHIN_SAMPLE:
                 sc_ACGT[i] = 1
-
-        # Filter.
-        if depth < param.MIN_DEPTH_SNP:
-            continue
-        if genome_coverage < param.MIN_GENOME_COVERAGE:
-            continue
-        if site_ratio > param.MAX_SITE_RATIO:
-            continue
 
         # Aggregate.
         genome_acc = accumulator[genome_id]
