@@ -56,7 +56,6 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     columns = next(table_iterator)
 
     # Get integer keys for columns
-    #c_site_id = columns["site_id"]
     c_genome_id = columns["genome_id"]
     c_ref_id = columns["ref_id"]
     c_ref_pos = columns["ref_pos"]
