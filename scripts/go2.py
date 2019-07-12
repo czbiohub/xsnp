@@ -127,7 +127,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
             acc = [A, C, G, T, 1, sc_ACGT[0], sc_ACGT[1], sc_ACGT[2], sc_ACGT[3]] + ([('N', 0)] * samples_count)
             genome_acc[site_id] = acc
         # This isn't being accumulated across samples;  we are just remembering the value from each sample.
-        assert acc[9 + sample_index] == ('N', 0) and nonzero_allele != 'N'
+        assert acc[9 + sample_index] == ('N', 0) and nz_allele != 'N'
         acc[9 + sample_index] = (nz_allele, nz_allele_freq)
 
 
