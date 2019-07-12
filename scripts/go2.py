@@ -15,6 +15,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     sample_name = sample_brief_names[sample_index]
     samples_count = len(sample_file_names)
     band = sample_pileup_path.rsplit(".", 2)[1]
+    print(sample_pileup_path)
     print(band)
     paramstr = f"dp{param.MIN_DEPTH}.gcb{param.MIN_GENOME_COVERED_BASES}.{band}"
 
