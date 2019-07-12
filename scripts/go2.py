@@ -60,6 +60,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     c_genome_id = columns["genome_id"]
     c_ref_id = columns["ref_id"]
     c_ref_pos = columns["ref_pos"]
+    c_ref_allele = columns["ref_allele"]
     c_depth = columns["depth"]
     c_A = columns["A"]
     c_C = columns["C"]
