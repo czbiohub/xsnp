@@ -10,7 +10,7 @@ import param
 from util import *
 
 
-def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, thread_id):
+def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id):
     sample_pileup_path = sample_file_names[sample_index]
     sample_name = sample_brief_names[sample_index]
     samples_count = len(sample_file_names)
@@ -51,8 +51,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         contig_stats[sname][contig_id] = row
 
     # Read banded pileup files
-    #table_iterator = parse_table(tsv_rows_slice2(sample_pileup_path, num_threads, thread_id), param.sample_pileup_schema_banded)
-    table_iterator = parse_table(tsv_rows_slice_contig(sample_pileup_path, thread_id), param.sample_pileup_schema_banded_v2)
+    table_iterator = parse_table(tsv_rows_slice2(sample_pileup_path, num_threads, thread_id), param.sample_pileup_schema_banded_v2)
     columns = next(table_iterator)
 
     # Get integer keys for columns
@@ -159,13 +158,12 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
 
 
 def process_worker(args):
-    sample_list_file, sample_file_names, thread_id = args
-    print(thread_id)
+    sample_list_file, sample_file_names, num_threads, thread_id = args
     t_start = time.time()
     accumulator = defaultdict(dict)
     sample_brief_names = [os.path.basename(sfn).split(".", 1)[0] for sfn in sample_file_names]
     for sample_index, sample_pileup_path in enumerate(sample_file_names):
-        accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, thread_id)
+        accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id)
     filter2(accumulator, sample_list_file, sample_brief_names)
     t_end = time.time()
     tsprint(f"THREAD {thread_id}: Run time {t_end - t_start} seconds.")
@@ -178,23 +176,9 @@ def main():
     sample_list_file = sys.argv[1]
     with open(sample_list_file, "r") as slf:
         sample_file_names = [line.strip() for line in slf]
-
-    # Handle the multi-process here
-    num_threads = param.THREADS
-    threads_banded = defaultdict(dict)
-    for thread_id in range(num_threads):
-        genomes = [g for g in list(set(param.CONTIGS.values())) if int(g[4:6]) % num_threads == thread_id]
-        contigs = [c for c,g in param.CONTIGS.items() if g in genomes]
-        threads_banded[thread_id]['genomes'] = list(genomes)
-        threads_banded[thread_id]['contigs'] = list(contigs)
-        output_path_contig_list = f"banded/band{thread_id}.contig_lists.txt"
-        with open(output_path_contig_list, 'w') as ot:
-            for contig in contigs:
-                ot.write(f"{contig}\n")
-
     t_start = time.time()
     mp = multiprocessing.Pool(param.THREADS)
-    results = mp.map(process_worker, [(sample_list_file, sample_file_names, thread_id) for thread_id in range(param.THREADS)])
+    results = mp.map(process_worker, [(sample_list_file, sample_file_names, param.THREADS, thread_id) for thread_id in range(param.THREADS)])
     t_end = time.time()
 
     tsprint(f"ALL THREADS:  Run time {t_end - t_start} seconds.")

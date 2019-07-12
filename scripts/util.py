@@ -80,7 +80,7 @@ def tsv_rows_slice(path, num_threads, thread_id):
 
 def tsv_rows_slice2(path, num_threads, thread_id):
     # TODO:  Support s3 and compressed files.
-    assert num_threads <= 100, "or else update 4:6 in 'line[4:6]' below"
+    assert num_threads <= 100, "or else update 2:4 in 'line[2:4]' below"
     with open(path, "r") as stream:
         yield next(stream).rstrip("\n").split("\t")
         for line in stream:
