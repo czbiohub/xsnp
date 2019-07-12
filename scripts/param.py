@@ -61,6 +61,7 @@ sample_pileup_schema_banded_v2 = {
     "genome_id":(str,),
     "ref_id": (str, ),
     "ref_pos": (int,),
+    "ref_allele": (str,),
     "depth": (int,),
     "A": (int,),
     "C": (int,),

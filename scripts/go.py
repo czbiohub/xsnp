@@ -128,12 +128,12 @@ def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulato
     # print_top(genome_covered_bases)
 
     with open(banded_output_path, "w") as o1:
-        o1.write("\t".join(["genome_id", "ref_id", "ref_pos","depth", "A", "C", "G", "T", "number_alleles" ,"nz_allele", "nz_allele_count"]) + "\n")
+        o1.write("\t".join(["genome_id", "ref_id", "ref_pos","ref_allele","depth", "A", "C", "G", "T", "number_alleles" ,"nz_allele", "nz_allele_count"]) + "\n")
         output_sites = 0
         for site_id, row in sites.items():
             if genome_accumulator[sample_name][row[c_genome_id]][og_genome_covered_bases] < param.MIN_GENOME_COVERED_BASES:
                 continue
-            o1.write("\t".join([str(row[c_genome_id]), str(row[c_ref_id]), str(row[c_ref_pos]), str(row[c_depth]), str(row[c_A]), str(row[c_C]), str(row[c_G]), str(row[c_T]), str(row[c_number_alleles]), row[c_nz_allele], str(row[c_nz_allele_count])]) + "\n")
+            o1.write("\t".join([str(row[c_genome_id]), str(row[c_ref_id]), str(row[c_ref_pos]), str(row[c_ref_allele]), str(row[c_depth]), str(row[c_A]), str(row[c_C]), str(row[c_G]), str(row[c_T]), str(row[c_number_alleles]), row[c_nz_allele], str(row[c_nz_allele_count])]) + "\n")
             output_sites += 1
 
     t_end = time.time()

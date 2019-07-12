@@ -82,7 +82,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         genome_id = row[c_genome_id]
         contig_id = row[c_ref_id]
         ref_pos = row[c_ref_pos]
-        #site_id = row[c_site_id]
+        ref_allele = row[c_ref_allele]
         depth = row[c_depth]
         nz_allele = row[c_nz_allele]
         nz_allele_count = row[c_nz_allele_count]
