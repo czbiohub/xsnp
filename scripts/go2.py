@@ -15,12 +15,10 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     sample_name = sample_brief_names[sample_index]
     samples_count = len(sample_file_names)
     band = sample_pileup_path.rsplit(".", 2)[1]
-    print(sample_pileup_path)
-    print(band)
     paramstr = f"dp{param.MIN_DEPTH}.gcb{param.MIN_GENOME_COVERED_BASES}.{band}"
 
-    input_path_contig_stats = f"{band}.contig_stats.tsv"
-    input_path_genome_stats = f"{band}.genome_stats.tsv"
+    input_path_contig_stats = f"banded/{band}.contig_stats.tsv"
+    input_path_genome_stats = f"banded/{band}.genome_stats.tsv"
 
     # Load genome stats
     table_iterator = parse_table(tsv_rows(input_path_genome_stats), param.schema_genome_stats)
