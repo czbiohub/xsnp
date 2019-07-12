@@ -53,7 +53,7 @@ def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulato
     genome_acc = genome_accumulator[sample_name]
 
     for line, row in enumerate(table_iterator):
-        if line % (1000*1000) == 0:
+        if line % (5000*1000) == 0:
             tsprint(f"{sample_pileup_path}_THREADID: {thread_id}: Processing {line}.")
         if line == param.MAX_LINES:
             break

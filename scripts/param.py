@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-THREADS = 8
+THREADS = 48
 
 
 # set to -1 to unlimit
@@ -10,7 +10,7 @@ MAX_LINES =  -1 #1 * 1000 * 100 #-1
 
 MIN_DEPTH = 2
 MIN_GENOME_COVERED_BASES=10
-MAX_SITE_RATIO=10
+MAX_SITE_RATIO=5
 MIN_ALLELE_FREQUENCY_WITHIN_SAMPLE=0.01
 MIN_DEPTH_SNP = 10
 
@@ -47,6 +47,7 @@ schema_contig_stats = {
 }
 
 sample_pileup_schema_banded = {
+    ## need to change this part
     "site_id": (str,),
     "depth": (int,),
     "A": (int,),
