@@ -128,7 +128,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
             genome_acc[site_id] = acc
         # This isn't being accumulated across samples;  we are just remembering the value from each sample.
         assert acc[9 + sample_index] == ('N', 0) and nonzero_allele != 'N'
-        acc[9 + sample_index] = (nonzero_allele, nonzero_allele_freq)
+        acc[9 + sample_index] = (nz_allele, nz_allele_freq)
 
 
 def filter2(accumulator, sample_list_file, sample_brief_names):
