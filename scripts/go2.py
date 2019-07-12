@@ -186,7 +186,7 @@ def main():
         contigs = [c for c,g in param.CONTIGS.items() if g in genomes]
         threads_banded[thread_id]['genomes'] = list(genomes)
         threads_banded[thread_id]['contigs'] = list(contigs)
-        output_path_contig_list = f"banded/band{thread_id}.contig_lists.txt"
+        output_path_contig_list = f"band{thread_id}.contig_lists.txt"
         with open(output_path_contig_list, 'w') as ot:
             for contig in contigs:
                 ot.write(f"{contig}\n")
