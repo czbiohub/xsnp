@@ -75,7 +75,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     for line, row in enumerate(table_iterator):
 
         if line % (1000*1000) == 0:
-            tsprint(f"{sample_pileup_path}_THREADID_: {thread_id}_SAMPLEIDX: {sample_index}: Processing {line}.")
+            tsprint(f"{sample_pileup_path}_THREAD{thread_id}_SAMPLEIDX{sample_index}: Processing {line}.")
         if line == param.MAX_LINES:
             break
 
@@ -133,10 +133,10 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
 
 def filter2(accumulator, sample_list_file, sample_brief_names):
 
-    outpref = sample_list_file.rsplit(".", 1)[0]
+    outpref = os.path.basename(sample_list_file).rsplit(".", 1)[0]
     for genome_id, genome_acc in accumulator.items():
 
-        output_sites = f"accumulators_{outpref}.gid_{genome_id}.sr_{param.MAX_SITE_RATIO}.dp_{param.MIN_DEPTH_SNP}.mgc_{param.MIN_GENOME_COVERAGE}.tsv"
+        output_sites = f"banded/accumulators_{outpref}.gid_{genome_id}.dp_{param.MIN_DEPTH_SNP}.mgc_{param.MIN_GENOME_COVERAGE}.sr_{param.MAX_SITE_RATIO}.tsv"
 
         with open(output_sites, "w") as out_sites:
             out_sites.write("site_id\tA\tC\tG\tT\tsample_count\tscA\tscC\tscG\tscT\n")
