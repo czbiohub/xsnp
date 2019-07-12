@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 
-THREADS = 48
+THREADS = 8
 
 
 # set to -1 to unlimit
-MAX_LINES =  -1 #1 * 1000 * 100 #-1
+MAX_LINES =  1 * 1000 * 100 #-1
 
 
 MIN_DEPTH = 2
@@ -24,7 +24,8 @@ sample_pileup_schema = {
    "count_t": (int, "T"),
    "depth":   (int,),
    "ref_pos": (int,),
-   "ref_id": (lambda ref_id: ref_id.replace("|", "_"),),
+   "ref_id": (str, ),
+   #"ref_id": (lambda ref_id: ref_id.replace("|", "_"),),
    "ref_allele": (str,)
 }
 
@@ -55,3 +56,11 @@ sample_pileup_schema_banded = {
     "nz_allele": (str,),
     "nz_allele_count": (int,)
 }
+
+## 20190709: Add global dict mapping_contig_genome
+CONTIGS = {}
+with open("mapping_contig_genome.tsv") as f:
+    for line in f:
+        genome_id = line.rstrip('\n').split('\t')[0]
+        contig_id = line.rstrip('\n').split('\t')[1]
+        CONTIGS[contig_id] = str(genome_id)

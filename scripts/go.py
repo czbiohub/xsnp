@@ -10,18 +10,19 @@ import param
 from util import *
 
 
-def process(sample_pileup_path, num_threads, thread_id, contig_accumulator, genome_accumulator):
-
+def process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulator):
+    """ process one sample """
     #tsprint(f"{sample_pileup_path}_tid{thread_id}: Processing sample pileup path")
     sample_name = chomp(sample_pileup_path, ".pileup")
-    paramstr = f"gcb{param.MIN_GENOME_COVERED_BASES}.dp{param.MIN_DEPTH}.band{thread_id}"
-    banded_output_path = f"banded/{sample_name}.sites.{paramstr}.tsv"
+    paramstr = f"dp{param.MIN_DEPTH}.gcb{param.MIN_GENOME_COVERED_BASES}.band{thread_id}"
+    banded_output_path = f"banded/{sample_name}.pileup.{paramstr}.tsv"
     t_start = time.time()
 
     sites = {}
     sites_count = 0
 
-    table_iterator = parse_table(tsv_rows_slice(sample_pileup_path, num_threads, thread_id), param.sample_pileup_schema)
+    #table_iterator = parse_table(tsv_rows(sample_pileup_path), param.sample_pileup_schema)
+    table_iterator = parse_table(tsv_rows_slice_contig(sample_pileup_path, thread_id), param.sample_pileup_schema)
     columns = next(table_iterator)
 
     # Add derived columns
@@ -67,7 +68,8 @@ def process(sample_pileup_path, num_threads, thread_id, contig_accumulator, geno
 
         # Compute derived columns.
         site_id = f"{contig_id}|{ref_pos}|{ref_allele}"
-        genome_id = contig_id.split("_", 1)[0]
+        #genome_id = contig_id.split("_", 1)[0]
+        genome_id = param.CONTIGS[contig_id]
 
         # Index and aggregate rows
         sites_count += 1
@@ -143,26 +145,25 @@ def process(sample_pileup_path, num_threads, thread_id, contig_accumulator, geno
 
 
 def process_worker(args):
-    sample_list_file, sample_file_names, num_threads, thread_id = args
+    sample_list_file, sample_file_names, thread_id = args
     t_start = time.time()
 
     contig_accumulator = defaultdict(dict)
     genome_accumulator = defaultdict(dict)
 
     for sample_index, sample_pileup_path in enumerate(sample_file_names):
-        process(sample_pileup_path, num_threads, thread_id, contig_accumulator, genome_accumulator)
+        process(sample_pileup_path, thread_id, contig_accumulator, genome_accumulator)
 
     output_path_contig_stats = f"banded/band{thread_id}.contig_stats.tsv"
     output_path_genome_stats = f"banded/band{thread_id}.genome_stats.tsv"
-
     with open(output_path_contig_stats, "w") as o2:
         o2.write("sample_name\tcontig_id\tgenome_id\tcontig_total_depth\tcontig_covered_bases\n")
         for sample_name, contig_acc in contig_accumulator.items():
             for contig_id, contig_info in contig_acc.items():
                 contig_total_depth, contig_covered_bases = contig_info
-                genome_id = contig_id.split("_", 1)[0]
+                #genome_id = contig_id.split("_", 1)[0]
+                genome_id = param.CONTIGS[contig_id]
                 o2.write(f"{sample_name}\t{contig_id}\t{genome_id}\t{contig_total_depth}\t{contig_covered_bases}\n")
-
     with open(output_path_genome_stats, "w") as o3:
         o3.write("sample_name\tgenome_id\tgenome_total_depth\tgenome_covered_bases\n")
         for sample_name, genome_acc in genome_accumulator.items():
@@ -184,9 +185,22 @@ def main():
     with open(sample_list_file, "r") as slf:
         sample_file_names = [line.strip() for line in slf]
 
+    # Handle the multi-process here
+    num_threads = param.THREADS
+    threads_banded = defaultdict(dict)
+    for thread_id in range(num_threads):
+        genomes = [g for g in list(set(param.CONTIGS.values())) if int(g[4:6]) % num_threads == thread_id]
+        contigs = [c for c,g in param.CONTIGS.items() if g in genomes]
+        threads_banded[thread_id]['genomes'] = list(genomes)
+        threads_banded[thread_id]['contigs'] = list(contigs)
+        output_path_contig_list = f"banded/band{thread_id}.contig_lists.txt"
+        with open(output_path_contig_list, 'w') as ot:
+            for contig in contigs:
+                ot.write(f"{contig}\n")
+
     t_start = time.time()
     mp = multiprocessing.Pool(param.THREADS)
-    results = mp.map(process_worker, [(sample_list_file, sample_file_names, param.THREADS, thread_id) for thread_id in range(param.THREADS)])
+    results = mp.map(process_worker, [(sample_list_file, sample_file_names, thread_id) for thread_id in range(param.THREADS)])
     t_end = time.time()
 
     tsprint(f"ALL THREADS:  Run time {t_end - t_start} seconds.")

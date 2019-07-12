@@ -3,6 +3,7 @@ import sys
 import json
 import multiprocessing
 import time
+import subprocess
 
 
 # Thread-safe and timestamped prints.
@@ -85,6 +86,17 @@ def tsv_rows_slice2(path, num_threads, thread_id):
         for line in stream:
             if int(line[2:4]) % num_threads == thread_id:
                 yield line.rstrip("\n").split("\t")
+
+def tsv_rows_slice_contig(path, thread_id):
+    # TODO:  Support s3 and compressed files.
+    pattern_contig_list = f"banded/band{thread_id}.contig_lists.txt"
+    command = 'grep -Fwf %s %s' % (pattern_contig_list, path)
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+    while True:
+        line = process.stdout.readline()
+        if not line:
+            break
+        yield line
 
 def print_top(counters, how_many=5):
     print(json.dumps(sorted(((depth, contig_id) for contig_id, depth in counters.items()), reverse=True)[:how_many], indent=4))
