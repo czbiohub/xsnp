@@ -38,8 +38,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         row.append(row[gs_total_depth] / row[gs_covered_bases])
         row.append(row[gs_covered_bases] / row[gs_genome_len] )
         genome_stats[sname][genome_id] = row
-    print(genome_stats)
-    assert False
+
     # Load contig stats
     table_iterator = parse_table(tsv_rows(input_path_contig_stats), param.schema_contig_stats)
     columns = next(table_iterator)
@@ -97,9 +96,12 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         nz_allele_freq = nz_allele_count / depth
         site_ratio = depth / contig_stats[sample_name][contig_id][cs_coverage]
         sample_depth = genome_stats[sample_name][genome_id][gs_sample_depth]
+        sample_coverage = genome_stats[sample_name][genome_id][gs_sample_coverage]
 
         # Sample filters
         if sample_depth < param.MIN_SAMPLE_DEPTH:
+            continue
+        if sample_coverage < param.MIN_SAMPLE_COV:
             continue
 
         # Site filters.
@@ -143,7 +145,7 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
         output_sites = f"banded/accumulators_{outpref}.gid_{genome_id}.dp_{param.MIN_DEPTH_SNP}.mgc_{param.MIN_GENOME_COVERAGE}.sr_{param.MAX_SITE_RATIO}.tsv"
 
         with open(output_sites, "w") as out_sites:
-            out_sites.write("site_id\tA\tC\tG\tT\tsample_count\tscA\tscC\tscG\tscT\n")
+            out_sites.write("site_id\tA\tC\tG\tT\tsample_count\tscA\tscC\tscG\tscT\t")
             out_sites.write("\t".join(["major_allele", "minor_allele"] + sample_brief_names) + "\n")
             for site_id, site_info in genome_acc.items():
                 A, C, G, T, sample_count, scA, scC, scG, scT = site_info[:9]
