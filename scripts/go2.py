@@ -38,7 +38,8 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         row.append(row[gs_total_depth] / row[gs_covered_bases])
         row.append(row[gs_covered_bases] / row[gs_genome_len] )
         genome_stats[sname][genome_id] = row
-
+    print(genome_stats)
+    assert False
     # Load contig stats
     table_iterator = parse_table(tsv_rows(input_path_contig_stats), param.schema_contig_stats)
     columns = next(table_iterator)
