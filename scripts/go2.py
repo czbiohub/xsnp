@@ -27,18 +27,17 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     gs_genome_id = columns["genome_id"]
     gs_total_depth = columns["total_depth"]
     gs_covered_bases = columns["covered_bases"]
+    gs_genome_len = columns["genome_len"] = len(columns)
     gs_sample_depth = columns["sample_depth"] = len(columns)
     gs_sample_coverage = columns["sample_coverage"] = len(columns)
     genome_stats = defaultdict(dict)
     for line, row in enumerate(table_iterator):
         sname = row[gs_sample_name]
         genome_id = row[gs_genome_id]
+        row.append(param.GENOME_LEN[genome_id])
         row.append(row[gs_total_depth] / row[gs_covered_bases])
-        row.append(row[gs_covered_bases] / param.GENOME_LEN[genome_id])
+        row.append(row[gs_covered_bases] / row[gs_genome_len] )
         genome_stats[sname][genome_id] = row
-
-    print(genome_stats)
-    assert False
 
     # Load contig stats
     table_iterator = parse_table(tsv_rows(input_path_contig_stats), param.schema_contig_stats)
