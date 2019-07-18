@@ -8,14 +8,19 @@ THREADS = 48
 MAX_LINES =  -1 #1 * 1000 * 100 #-1
 
 
-MIN_DEPTH = 2
+MIN_DEPTH = 2 ## aka site_depth
 MIN_GENOME_COVERED_BASES = 10
 MAX_SITE_RATIO = 5
 MIN_ALLELE_FREQUENCY_WITHIN_SAMPLE = 0.01
 
 MIN_DEPTH_SNP = 5
 MIN_ALLELE_FREQUECY_ACROSS_SAMPLES = 0.05
-MIN_GENOME_COVERAGE = 2.0
+MIN_GENOME_COVERAGE = 2.0 ## this is really sample_depth
+
+MIN_SAMPLE_COV = 0.4 # horizontal coverage
+MIN_SAMPLE_DEPTH = 5 # vertical coverage
+MIN_SAMPLE_COUNTS = 20
+
 
 sample_pileup_schema = {
    "count_a": (int, "A"),
@@ -79,3 +84,14 @@ with open("mapping_contig_genome.tsv") as f:
         genome_id = line.rstrip('\n').split('\t')[0]
         contig_id = line.rstrip('\n').split('\t')[1]
         CONTIGS[contig_id] = str(genome_id)
+
+GENOME_LEN = {}
+with open("genomes.len") as f:
+    for line in f:
+        contig_id = line.rstrip('\n').split('\t')[0]
+        contig_length = int(line.rstrip('\n').split('\t')[1])
+        genome_id = CONTIGS[contig_id]
+        if genome_id in GENOME_LEN:
+            GENOME_LEN[genome_id] += contig_length
+        else:
+            GENOME_LEN[genome_id] = contig_length

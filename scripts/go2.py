@@ -27,13 +27,18 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     gs_genome_id = columns["genome_id"]
     gs_total_depth = columns["total_depth"]
     gs_covered_bases = columns["covered_bases"]
-    gs_coverage = columns["coverage"] = len(columns)
+    gs_sample_depth = columns["sample_depth"] = len(columns)
+    gs_sample_coverage = columns["sample_coverage"] = len(columns)
     genome_stats = defaultdict(dict)
     for line, row in enumerate(table_iterator):
-        row.append(row[gs_total_depth] / row[gs_covered_bases])
         sname = row[gs_sample_name]
         genome_id = row[gs_genome_id]
+        row.append(row[gs_total_depth] / row[gs_covered_bases])
+        row.append(row[gs_covered_bases] / param.GENOME_LEN[genome_id])
         genome_stats[sname][genome_id] = row
+
+    print(genome_stats)
+    assert False
 
     # Load contig stats
     table_iterator = parse_table(tsv_rows(input_path_contig_stats), param.schema_contig_stats)
@@ -91,11 +96,13 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         site_id = f"{contig_id}|{ref_pos}|{ref_allele}"
         nz_allele_freq = nz_allele_count / depth
         site_ratio = depth / contig_stats[sample_name][contig_id][cs_coverage]
-        genome_coverage = genome_stats[sample_name][genome_id][gs_coverage]
+        sample_depth = genome_stats[sample_name][genome_id][gs_sample_depth]
 
-        # Filter.
-        if genome_coverage < param.MIN_GENOME_COVERAGE:
+        # Sample filters
+        if sample_depth < param.MIN_SAMPLE_DEPTH:
             continue
+
+        # Site filters.
         if depth < param.MIN_DEPTH_SNP:
             continue
         if site_ratio > param.MAX_SITE_RATIO:
