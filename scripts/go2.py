@@ -20,7 +20,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
     input_path_contig_stats = f"banded/{band}.contig_stats.tsv"
     input_path_genome_stats = f"banded/{band}.genome_stats.tsv"
 
-    # Load genome stats
+    # Load derived tables genome_stats
     table_iterator = parse_table(tsv_rows(input_path_genome_stats), param.schema_genome_stats)
     columns = next(table_iterator)
     gs_sample_name = columns["sample_name"]
@@ -35,7 +35,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         genome_id = row[gs_genome_id]
         genome_stats[sname][genome_id] = row
 
-    # Load contig stats
+    # Load derived tables contig_stats
     table_iterator = parse_table(tsv_rows(input_path_contig_stats), param.schema_contig_stats)
     columns = next(table_iterator)
     cs_sample_name = columns["sample_name"]
@@ -49,6 +49,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         sname = row[cs_sample_name]
         contig_id = row[cs_contig_id]
         contig_stats[sname][contig_id] = row
+
 
     # Read banded pileup files
     table_iterator = parse_table(tsv_rows_slice2(sample_pileup_path, num_threads, thread_id), param.sample_pileup_schema_banded_v2)
@@ -123,6 +124,7 @@ def accumulate(accumulator, sample_file_names, sample_brief_names, sample_index,
         else:
             acc = [A, C, G, T, 1, sc_ACGT[0], sc_ACGT[1], sc_ACGT[2], sc_ACGT[3]] + ([('N', 0)] * samples_count)
             genome_acc[site_id] = acc
+
         # This isn't being accumulated across samples;  we are just remembering the value from each sample.
         assert acc[9 + sample_index] == ('N', 0) and nz_allele != 'N'
         acc[9 + sample_index] = (nz_allele, nz_allele_freq)
@@ -134,15 +136,16 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
     for genome_id, genome_acc in accumulator.items():
 
         output_sites = f"banded/accumulators_{outpref}.gid_{genome_id}.dp_{param.MIN_DEPTH_SNP}.mgc_{param.MIN_GENOME_COVERAGE}.sr_{param.MAX_SITE_RATIO}.tsv"
-
         with open(output_sites, "w") as out_sites:
             out_sites.write("site_id\tA\tC\tG\tT\tsample_count\tscA\tscC\tscG\tscT\n")
             out_sites.write("\t".join(["major_allele", "minor_allele"] + sample_brief_names) + "\n")
+
             for site_id, site_info in genome_acc.items():
                 A, C, G, T, sample_count, scA, scC, scG, scT = site_info[:9]
                 depth = A + C + G + T
                 all_alleles = ((A, 'A'), (C, 'C'), (G, 'G'), (T, 'T'))
                 alleles_above_cutoff = tuple(al for al in all_alleles if al[0] / depth >= param.MIN_ALLELE_FREQUECY_ACROSS_SAMPLES)
+
                 # Keep only bi-allelic and mono-allelic sites.
                 if 1 <= len(alleles_above_cutoff) <= 2:
                     # In the event of a tie -- biallelic site with 50/50 freq split -- the allele declared major is
@@ -152,20 +155,23 @@ def filter2(accumulator, sample_list_file, sample_brief_names):
                     minor_allele = alleles_above_cutoff[-1][1]  # for mono-allelic sites, same as major allele
                     out_sites.write(f"{site_id}\t{A}\t{C}\t{G}\t{T}\t{sample_count}\t{scA}\t{scC}\t{scG}\t{scT}\t")
                     major_allele_freqs_by_sample = "\t".join(
-                        "{:.3f}".format(-1.0 if allele == 'N' else (freq if allele==major_allele else 1.0 - freq))
+                        "{:.3f}".format(-1.0 if allele == 'N' else (freq if allele == major_allele else 1.0 - freq))
                         for allele, freq in site_info[9:])
                     out_sites.write(major_allele + "\t" + minor_allele + "\t" + major_allele_freqs_by_sample + "\n")
 
 
 def process_worker(args):
     sample_list_file, sample_file_names, num_threads, thread_id = args
+
     t_start = time.time()
     accumulator = defaultdict(dict)
     sample_brief_names = [os.path.basename(sfn).split(".", 1)[0] for sfn in sample_file_names]
     for sample_index, sample_pileup_path in enumerate(sample_file_names):
         accumulate(accumulator, sample_file_names, sample_brief_names, sample_index, num_threads, thread_id)
+
     filter2(accumulator, sample_list_file, sample_brief_names)
     t_end = time.time()
+
     tsprint(f"THREAD {thread_id}: Run time {t_end - t_start} seconds.")
     return "it worked"
 
@@ -176,6 +182,7 @@ def main():
     sample_list_file = sys.argv[1]
     with open(sample_list_file, "r") as slf:
         sample_file_names = [line.strip() for line in slf]
+
     t_start = time.time()
     mp = multiprocessing.Pool(param.THREADS)
     results = mp.map(process_worker, [(sample_list_file, sample_file_names, param.THREADS, thread_id) for thread_id in range(param.THREADS)])
