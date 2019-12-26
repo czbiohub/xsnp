@@ -18,8 +18,8 @@ xsnp/scripts/go.py list_of_pileup_files
 Second pass:
 ```
 cd banded
+for sample in `cat ../sample_all.txt`; do for x in {0..47}; do echo ${sample%.pileup}.dp2.gcb10.band${x}.tsv >> band${x}.txt; done; done
 
-for sample in `cat ../hmp_all.txt`; do for x in {0..47}; do echo ${sample%.pileup}.sites.gcb10.dp2.band${x}.tsv >> band${x}.txt; done; done
-
+mv band*.txt ../
 for i in {0..47}; do echo band${i}.txt; xsnp/scripts/go2.py "band${i}".txt; done
 ```
