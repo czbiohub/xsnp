@@ -21,6 +21,5 @@ cd banded
 
 for sample in `cat ../hmp_all.txt`; do for x in {0..47}; do echo ${sample%.pileup}.sites.gcb10.dp2.band${x}.tsv >> band${x}.txt; done; done
 
-
 for i in {0..47}; do echo band${i}.txt; xsnp/scripts/go2.py "band${i}".txt; done
 ```
